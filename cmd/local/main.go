@@ -1,26 +1,40 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
 	"github.com/joho/godotenv"
 	"github.com/vichcraft/email-digest/internal/config"
+	"github.com/vichcraft/email-digest/internal/email"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println(".env file not found")
-	}
+	godotenv.Load()
 
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	fmt.Printf("Gmail accounts: %d\n", len(cfg.GmailAccounts))
+	ctx := context.Background()
 
-	fmt.Println(cfg.GmailAccounts[2].Email)
+	account := cfg.GmailAccounts[2]
+	fmt.Printf("Connecting to %s....", account.Email)
 
-	fmt.Println("Config loaded successfully")
+	service, err := email.NewClient(ctx, cfg.CredentialsPath, account.TokenPath)
+	if err != nil {
+		log.Fatalf("Failed to create Gmail client: %v", err)
+	}
+
+	fmt.Println("Succesfully connected to Gmail!")
+
+	profile, err := service.Users.GetProfile("me").Do()
+	if err != nil {
+		log.Fatalf("Failed to get profile: %v", err)
+	}
+
+	fmt.Printf("Email: %s\n", profile.EmailAddress)
+	fmt.Printf("Total messages: %d\n", profile.MessagesTotal)
 }
